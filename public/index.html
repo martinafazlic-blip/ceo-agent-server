@@ -22,7 +22,7 @@
   <p>Ogni azienda registrata ottiene un proprio spazio dati separato, isolato dalle altre.</p>
   <form id="f">
     <label>Nome azienda</label>
-    <input name="name" placeholder="Es. Nord Meccanica Srl" required>
+    <input name="name" placeholder="Es. Nord Meccanica Srl">
     <label>Settore</label>
     <input name="sector" placeholder="Es. componentistica industriale">
     <label>Prodotti/servizi</label>
@@ -71,6 +71,11 @@
       const box = document.getElementById("result");
       box.style.display = "block";
       box.className = "";
+      if(!body.name || !body.name.trim()){
+        box.className = "err";
+        box.innerHTML = "Errore: inserisci il nome dell'azienda.";
+        return;
+      }
       box.innerHTML = "Registrazione in corso...";
       try {
         const logoFile = f.logoFile.files[0];
@@ -92,6 +97,14 @@
           <div style="margin-top:8px;">Chiave di accesso (apiKey):</div>
           <div class="key">${data.apiKey}</div>
         `;
+        try{
+          localStorage.setItem("ceo-agent-tenant", JSON.stringify({ tenantId: data.tenantId, apiKey: data.apiKey }));
+        }catch(e){ /* localStorage non disponibile, l'utente incollera' le credenziali a mano */ }
+        const goBtn = document.createElement("button");
+        goBtn.textContent = "Vai alla dashboard →";
+        goBtn.style.cssText = "margin-top:14px;padding:10px 18px;background:#5B8DEF;color:#0d1117;border:none;border-radius:6px;font-weight:600;cursor:pointer;";
+        goBtn.onclick = () => location.href = "/app.html";
+        box.appendChild(goBtn);
       } catch (err) {
         box.className = "err";
         box.innerHTML = "Errore: " + err.message;

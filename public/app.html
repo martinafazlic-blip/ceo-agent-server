@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>CEO Agent — Dashboard</title>
+<style>
+  :root{
+    --bg:#12161C; --panel:#181D24; --panel-alt:#1E252D; --border:#2A323C; --border-soft:#232B34;
+    --text:#E8EAED; --text-muted:#8B95A1; --text-dim:#5C6672;
+    --ceo:#5B8DEF; --amber:#E8A33D; --success:#4FAE8A; --danger:#D65F5F; --violet:#9B7FD4;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,sans-serif;}
+  button{cursor:pointer;border:none;font-family:inherit;}
+  input,textarea,select{font-family:inherit;background:var(--panel-alt);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:8px 10px;width:100%;box-sizing:border-box;}
+  label{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);display:block;margin:10px 0 5px;}
+  .btn{border-radius:6px;padding:9px 16px;font-size:13.5px;font-weight:600;}
+  .btn-primary{background:var(--ceo);color:#0d1117;}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text);}
+  .btn-success{background:var(--success);color:#0d1117;}
+  .btn-danger{background:var(--danger);color:#0d1117;}
+  .btn-sm{padding:5px 11px;font-size:12px;border-radius:5px;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+  .gate{max-width:420px;margin:90px auto;padding:0 20px;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:18px;}
+  .panel-title{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin:0 0 12px;}
+  .topbar{position:sticky;top:0;background:rgba(18,22,28,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--border);padding:14px 22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+  .layout{display:grid;grid-template-columns:1fr 300px;gap:18px;padding:20px 22px 60px;max-width:1300px;margin:0 auto;}
+  @media (max-width:880px){.layout{grid-template-columns:1fr;}}
+  .chip{font-size:10.5px;background:var(--panel-alt);border:1px solid var(--border-soft);color:var(--text-muted);padding:3px 8px;border-radius:4px;display:inline-block;}
+  .task-row{border:1px solid var(--border-soft);border-radius:6px;padding:10px 12px;margin-bottom:6px;background:var(--panel-alt);}
+  .task-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+  .agent-header{font-size:11.5px;text-transform:uppercase;color:var(--text-muted);letter-spacing:.04em;padding:12px 2px 6px;}
+  .status-badge{font-size:10.5px;text-transform:uppercase;padding:3px 8px;border-radius:3px;}
+  .st-pianificata{color:var(--text-muted);background:rgba(139,149,161,.1);}
+  .st-in-corso{color:var(--amber);background:rgba(232,163,61,.12);}
+  .st-in-approvazione{color:var(--violet);background:rgba(155,127,212,.12);}
+  .st-assegnata{color:#5FC7D6;background:rgba(95,199,214,.1);}
+  .st-completata{color:var(--success);background:rgba(79,174,138,.12);}
+  .st-annullata{color:var(--text-dim);background:rgba(92,102,114,.12);}
+  .st-bloccata{color:var(--danger);background:rgba(214,95,95,.12);}
+  .result-box{font-size:12.5px;color:var(--text-muted);background:var(--panel);border:1px dashed var(--border);border-radius:5px;padding:9px 10px;margin-top:8px;}
+  .approval-box{font-size:12.5px;line-height:1.6;background:rgba(155,127,212,.06);border:1px solid rgba(155,127,212,.25);border-radius:5px;padding:10px;margin-top:8px;white-space:pre-line;}
+  .error-box{background:rgba(214,95,95,.1);border:1px solid rgba(214,95,95,.3);color:var(--danger);font-size:12.5px;padding:9px 11px;border-radius:6px;margin-bottom:14px;}
+  .loading-line{font-size:12.5px;color:var(--ceo);padding:10px 0;}
+  .empty{color:var(--text-dim);font-size:13px;padding:16px 0;text-align:center;}
+  .agent-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--border-soft);border-radius:5px;background:var(--panel-alt);margin-bottom:5px;font-size:12px;}
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate">
+  <h1 style="font-size:22px;">Entra nella tua dashboard</h1>
+  <p style="color:#8B95A1;font-size:13.5px;">Inserisci le credenziali ricevute durante la registrazione (tenantId e apiKey).</p>
+  <label>ID azienda (tenantId)</label>
+  <input id="gTenant" placeholder="es. nord-meccanica-srl">
+  <label>Chiave di accesso (apiKey)</label>
+  <input id="gKey" type="password" placeholder="apiKey">
+  <button class="btn btn-primary" style="width:100%;margin-top:16px;" onclick="login()">Entra</button>
+  <div id="gateErr" style="color:#D65F5F;font-size:12.5px;margin-top:10px;"></div>
+  <p style="margin-top:20px;"><a href="/" style="color:#5B8DEF;">Non hai ancora registrato la tua azienda?</a></p>
+</div>
+
+<div id="app" style="display:none;"></div>
+
+<script>
+  let TENANT = null, KEY = null, STATE = null, ERROR = null, LOADING = null;
+
+  function api(path){ return `/api/${TENANT}${path}`; }
+  function headers(){ return { "Content-Type": "application/json", "x-tenant-key": KEY }; }
+
+  async function login(){
+    const t = document.getElementById("gTenant").value.trim();
+    const k = document.getElementById("gKey").value.trim();
+    const err = document.getElementById("gateErr");
+    err.textContent = "";
+    if(!t || !k){ err.textContent = "Inserisci entrambi i valori."; return; }
+    try{
+      const resp = await fetch(`/api/${t}/state`, { headers: { "x-tenant-key": k } });
+      const data = await resp.json();
+      if(!resp.ok) throw new Error(data.error || "Accesso non riuscito");
+      TENANT = t; KEY = k; STATE = data;
+      localStorage.setItem("ceo-agent-tenant", JSON.stringify({ tenantId: t, apiKey: k }));
+      document.getElementById("gate").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      render();
+    }catch(e){
+      err.textContent = "Errore: " + e.message;
+    }
+  }
+
+  function logout(){
+    localStorage.removeItem("ceo-agent-tenant");
+    location.reload();
+  }
+
+  async function refreshState(){
+    const resp = await fetch(api("/state"), { headers: headers() });
+    if(resp.ok) STATE = await resp.json();
+  }
+
+  async function submitObjective(){
+    const text = document.getElementById("objText").value.trim();
+    const budget = document.getElementById("objBudget").value;
+    const deadlineDays = document.getElementById("objDeadline").value;
+    if(!text) return;
+    LOADING = "Il CEO Agent sta analizzando l'obiettivo..."; ERROR = null; render();
+    try{
+      const resp = await fetch(api("/objective"), { method: "POST", headers: headers(), body: JSON.stringify({ text, budget, deadlineDays }) });
+      const data = await resp.json();
+      if(!resp.ok) throw new Error(data.error);
+      await refreshState();
+    }catch(e){ ERROR = e.message; }
+    LOADING = null; render();
+  }
+
+  async function executeTask(objId, taskId){
+    try{
+      await fetch(api(`/objective/${objId}/task/${taskId}/execute`), { method: "POST", headers: headers() });
+      await refreshState(); render();
+    }catch(e){ ERROR = e.message; render(); }
+  }
+
+  async function requestApproval(objId, taskId){
+    try{
+      await fetch(api(`/objective/${objId}/task/${taskId}/request-approval`), { method: "POST", headers: headers() });
+      await refreshState(); render();
+    }catch(e){ ERROR = e.message; render(); }
+  }
+
+  async function decideApproval(objId, taskId, approved){
+    try{
+      await fetch(api(`/objective/${objId}/task/${taskId}/decide`), { method: "POST", headers: headers(), body: JSON.stringify({ approved }) });
+      await refreshState(); render();
+    }catch(e){ ERROR = e.message; render(); }
+  }
+
+  async function toggleAgent(name, enabled){
+    try{
+      await fetch(api(`/agents/${encodeURIComponent(name)}`), { method: "PATCH", headers: headers(), body: JSON.stringify({ enabled: !enabled }) });
+      await refreshState(); render();
+    }catch(e){ ERROR = e.message; render(); }
+  }
+
+  let REPORT = null;
+  async function loadReport(){
+    LOADING = "Sto generando il report..."; render();
+    try{
+      const resp = await fetch(api("/report/today"), { headers: headers() });
+      const data = await resp.json();
+      REPORT = data.report;
+    }catch(e){ ERROR = e.message; }
+    LOADING = null; render();
+  }
+
+  function render(){
+    const app = document.getElementById("app");
+    const p = STATE.profile;
+    const objectives = STATE.objectives || [];
+    const agents = STATE.agents || {};
+
+    app.innerHTML = `
+      <div class="topbar">
+        <div style="display:flex;align-items:center;gap:10px;">
+          ${p.logo ? `<img src="${p.logo}" style="width:28px;height:28px;border-radius:6px;object-fit:cover;">` : `<span style="width:9px;height:9px;border-radius:50%;background:var(--ceo);display:inline-block;"></span>`}
+          <div><strong>${p.name}</strong><div style="font-size:11px;color:var(--text-muted);">${p.sector}</div></div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="loadReport()">Report di oggi</button>
+          <button class="btn btn-ghost btn-sm" onclick="logout()">Esci</button>
+        </div>
+      </div>
+      <div class="layout">
+        <div>
+          ${ERROR ? `<div class="error-box">${ERROR}</div>` : ""}
+          ${REPORT ? `<div class="panel"><div class="panel-title">Report di oggi</div><div style="font-size:13.5px;line-height:1.6;white-space:pre-line;">${REPORT}</div></div>` : ""}
+          <div class="panel">
+            <div class="panel-title">Nuovo obiettivo</div>
+            <textarea id="objText" placeholder='Es. "Aumentare il fatturato del 20% in sei mesi"' style="min-height:60px;"></textarea>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
+              <div><label>Budget (EUR)</label><input id="objBudget" type="number" placeholder="20000"></div>
+              <div><label>Scadenza (giorni)</label><input id="objDeadline" type="number" placeholder="180"></div>
+            </div>
+            <button class="btn btn-primary" style="margin-top:12px;" onclick="submitObjective()" ${LOADING?"disabled":""}>Invia al CEO Agent</button>
+            ${LOADING ? `<div class="loading-line">${LOADING}</div>` : ""}
+          </div>
+          ${objectives.length ? objectives.map(renderObjective).join("") : `<div class="panel"><div class="empty">Nessun obiettivo ancora.</div></div>`}
+        </div>
+        <div>
+          <div class="panel">
+            <div class="panel-title">Agenti (${Object.keys(agents).length})</div>
+            <div style="max-height:420px;overflow-y:auto;">
+              ${Object.keys(agents).map(name => {
+                const a = agents[name];
+                return `<div class="agent-row" style="${a.enabled?"":"opacity:.5;"}">
+                  <span>${name}${a.supervisionata ? " 🟡" : ""}</span>
+                  <button class="btn btn-sm ${a.enabled?"btn-success":"btn-ghost"}" onclick="toggleAgent('${name.replace(/'/g,"\\'")}', ${a.enabled})">${a.enabled?"Attivo":"Spento"}</button>
+                </div>`;
+              }).join("")}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderObjective(o){
+    const tasksByAgent = {};
+    o.tasks.forEach(t => { (tasksByAgent[t.agente] = tasksByAgent[t.agente] || []).push(t); });
+    return `
+      <div class="panel">
+        <div class="panel-title">${o.text}</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:10px;">${o.analysis?.obiettivo_riformulato || ""}</div>
+        ${Object.keys(tasksByAgent).map(agentName => `
+          <div class="agent-header">${agentName}</div>
+          ${tasksByAgent[agentName].map(t => renderTask(o.id, t)).join("")}
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function renderTask(objId, t){
+    let action = "";
+    if(t.stato === "pianificata" && t.richiedeApprovazione){
+      action = `<button class="btn btn-ghost btn-sm" onclick="requestApproval('${objId}','${t.id}')">Richiedi approvazione</button>`;
+    } else if(t.stato === "pianificata" || t.stato === "assegnata"){
+      action = `<button class="btn btn-primary btn-sm" onclick="executeTask('${objId}','${t.id}')">Esegui</button>`;
+    } else if(t.stato === "bloccata"){
+      action = `<button class="btn btn-ghost btn-sm" onclick="executeTask('${objId}','${t.id}')">Riprova</button>`;
+    }
+    let extra = "";
+    if(t.stato === "in approvazione" && t.approvalRequest){
+      extra = `<div class="approval-box">${t.approvalRequest}
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <button class="btn btn-success btn-sm" onclick="decideApproval('${objId}','${t.id}',true)">Approva</button>
+          <button class="btn btn-danger btn-sm" onclick="decideApproval('${objId}','${t.id}',false)">Rifiuta</button>
+        </div>
+      </div>`;
+    }
+    if(t.stato === "completata" && t.risultato){
+      extra = `<div class="result-box">${t.risultato}</div>`;
+    }
+    return `
+      <div class="task-row">
+        <div class="task-top">
+          <div>
+            <div style="font-size:13px;font-weight:600;">${t.titolo}</div>
+            <div style="font-size:11.5px;color:var(--text-muted);">${t.descrizione}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="chip">Lv.${t.livelloAutorizzazione}</span>
+            <span class="status-badge st-${t.stato.replace(/ /g,"-")}">${t.stato}</span>
+            ${action}
+          </div>
+        </div>
+        ${extra}
+      </div>
+    `;
+  }
+
+  // ---------- avvio ----------
+  (async function init(){
+    const saved = localStorage.getItem("ceo-agent-tenant");
+    if(saved){
+      try{
+        const { tenantId, apiKey } = JSON.parse(saved);
+        const resp = await fetch(`/api/${tenantId}/state`, { headers: { "x-tenant-key": apiKey } });
+        if(resp.ok){
+          TENANT = tenantId; KEY = apiKey; STATE = await resp.json();
+          document.getElementById("gate").style.display = "none";
+          document.getElementById("app").style.display = "block";
+          render();
+          return;
+        }
+      }catch(e){ /* fallback al login manuale */ }
+    }
+  })();
+</script>
+</body>
+</html>
