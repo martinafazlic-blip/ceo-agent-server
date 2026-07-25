@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>CEO Agent — Registrazione azienda</title>
+<style>
+  body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#12161C;color:#E8EAED;max-width:520px;margin:60px auto;padding:0 20px;}
+  h1{font-size:22px;}
+  p{color:#8B95A1;font-size:14px;line-height:1.5;}
+  label{display:block;font-size:12px;color:#8B95A1;text-transform:uppercase;margin:14px 0 5px;}
+  input,select{width:100%;padding:9px 10px;background:#1E252D;border:1px solid #2A323C;border-radius:5px;color:#E8EAED;box-sizing:border-box;}
+  button{margin-top:20px;padding:11px 20px;background:#5B8DEF;color:#0d1117;border:none;border-radius:6px;font-weight:600;cursor:pointer;font-size:14px;}
+  #result{margin-top:24px;padding:16px;background:#1E252D;border:1px solid #2A323C;border-radius:8px;display:none;word-break:break-all;}
+  #result.ok{border-color:#4FAE8A;}
+  #result.err{border-color:#D65F5F;}
+  .key{font-family:monospace;background:#12161C;padding:8px;border-radius:5px;margin-top:6px;font-size:13px;}
+  .warn{color:#E8A33D;font-size:12.5px;margin-top:10px;}
+</style>
+</head>
+<body>
+  <h1>Registra la tua azienda</h1>
+  <p>Ogni azienda registrata ottiene un proprio spazio dati separato, isolato dalle altre.</p>
+  <form id="f">
+    <label>Nome azienda</label>
+    <input name="name" placeholder="Es. Nord Meccanica Srl" required>
+    <label>Settore</label>
+    <input name="sector" placeholder="Es. componentistica industriale">
+    <label>Prodotti/servizi</label>
+    <input name="products" placeholder="Cosa vende l'azienda">
+    <label>Budget disponibile (EUR)</label>
+    <input name="budgetMax" type="number" placeholder="50000">
+    <label>Soglia approvazione (EUR)</label>
+    <input name="approvalThreshold" type="number" placeholder="5000">
+    <label>Livello di rischio</label>
+    <select name="riskLevel"><option value="basso">Basso</option><option value="medio" selected>Medio</option><option value="alto">Alto</option></select>
+    <button type="submit">Registra azienda</button>
+  </form>
+  <div id="result"></div>
+
+  <script>
+    document.getElementById("f").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const body = Object.fromEntries(new FormData(f).entries());
+      const box = document.getElementById("result");
+      box.style.display = "block";
+      box.className = "";
+      box.innerHTML = "Registrazione in corso...";
+      try {
+        const resp = await fetch("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Errore sconosciuto");
+        box.className = "ok";
+        box.innerHTML = `
+          <strong>Azienda registrata!</strong>
+          <div class="warn">⚠ Salva subito questi due valori: non verranno mostrati di nuovo.</div>
+          <div>ID azienda (tenantId):</div>
+          <div class="key">${data.tenantId}</div>
+          <div style="margin-top:8px;">Chiave di accesso (apiKey):</div>
+          <div class="key">${data.apiKey}</div>
+        `;
+      } catch (err) {
+        box.className = "err";
+        box.innerHTML = "Errore: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
