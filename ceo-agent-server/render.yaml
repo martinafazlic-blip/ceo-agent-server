@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: ceo-agent-server
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: DAILY_REPORT_CRON
+        value: "0 8 * * *"
+      - key: TIMEZONE
+        value: Europe/Rome
