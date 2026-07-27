@@ -20,6 +20,7 @@
 <body>
   <h1>Registra la tua azienda</h1>
   <p>Ogni azienda registrata ottiene un proprio spazio dati separato, isolato dalle altre.</p>
+  <p style="margin:-6px 0 18px;"><a href="/app.html" style="color:#5B8DEF;">Sei già registrato? Vai al login →</a></p>
   <form id="f">
     <label>Nome azienda</label>
     <input name="name" placeholder="Es. Nord Meccanica Srl">
@@ -90,6 +91,7 @@
         box.className = "ok";
         box.innerHTML = `
           <strong>Azienda registrata!</strong>
+          ${data.nameAlreadyUsed ? `<div class="warn">⚠ Esiste già un'azienda con un nome simile. Se sei tu, usa il link "Sei già registrato? Vai al login" qui sopra invece di crearne una nuova — questa registrazione ha comunque creato uno spazio dati separato.</div>` : ""}
           ${data.profile.logo ? `<div style="margin-top:8px;"><img src="${data.profile.logo}" style="width:48px;height:48px;border-radius:8px;object-fit:cover;"></div>` : ""}
           <div class="warn">⚠ Salva subito questi due valori: non verranno mostrati di nuovo.</div>
           <div>ID azienda (tenantId):</div>

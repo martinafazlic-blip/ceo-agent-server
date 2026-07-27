@@ -84,14 +84,17 @@
     recognition = new SpeechRec();
     recognition.lang = "it-IT";
     recognition.interimResults = false;
-    recognition.continuous = false;
+    recognition.continuous = true; // resta in ascolto finche' non clicchi di nuovo, per dettare obiettivi lunghi
     listening = true;
-    btn.textContent = "🔴 Ascolto...";
+    const baseText = document.getElementById("objText").value.trim();
+    btn.textContent = "🔴 Ascolto... (clicca per fermare)";
     recognition.start();
     recognition.onresult = (e) => {
-      const text = e.results[0][0].transcript;
-      const ta = document.getElementById("objText");
-      ta.value = (ta.value.trim() ? ta.value.trim() + " " : "") + text;
+      let finalText = baseText;
+      for(let i = 0; i < e.results.length; i++){
+        if(e.results[i].isFinal) finalText += (finalText ? " " : "") + e.results[i][0].transcript;
+      }
+      document.getElementById("objText").value = finalText;
     };
     recognition.onerror = () => {};
     recognition.onend = () => {
@@ -239,7 +242,7 @@
           <div class="panel">
             <div class="panel-title">Nuovo obiettivo</div>
             <div style="display:flex;gap:8px;align-items:flex-start;">
-              <textarea id="objText" placeholder='Es. "Aumentare il fatturato del 20% in sei mesi"' style="min-height:60px;flex:1;"></textarea>
+              <textarea id="objText" placeholder='Es. "Aumentare il fatturato del 20% in sei mesi"' style="min-height:100px;flex:1;"></textarea>
               <button class="btn btn-ghost btn-sm" id="micBtn" onclick="toggleVoiceInput()" title="Parla invece di scrivere" style="white-space:nowrap;">🎤 Parla</button>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">

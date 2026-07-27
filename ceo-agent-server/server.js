@@ -42,6 +42,7 @@ app.post("/api/register", async (req, res) => {
     tenantId: state.tenantId,
     apiKey: state.apiKey,
     profile: state.profile,
+    nameAlreadyUsed: state.nameAlreadyUsed,
     avviso: "Salva subito questa apiKey: serve per ogni chiamata futura e non verra' piu' mostrata."
   });
 });

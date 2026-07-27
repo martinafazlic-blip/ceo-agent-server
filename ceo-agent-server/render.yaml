@@ -1,3 +1,7 @@
+databases:
+  - name: ceo-agent-db
+    plan: free
+
 services:
   - type: web
     name: ceo-agent-server
@@ -8,7 +12,13 @@ services:
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false
+      - key: ADMIN_KEY
+        sync: false
       - key: DAILY_REPORT_CRON
         value: "0 8 * * *"
       - key: TIMEZONE
         value: Europe/Rome
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ceo-agent-db
+          property: connectionString

@@ -1,22 +1,29 @@
-import { readFile, writeFile, readdir, mkdir, unlink } from "fs/promises";
-import { existsSync } from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import pg from "pg";
 import { randomBytes } from "crypto";
 import { DEFAULT_AGENTS } from "./agents.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const TENANTS_DIR = path.join(__dirname, "..", "data", "tenants");
+const { Pool } = pg;
 
-// NOTA: un file JSON per azienda va bene per un MVP con poche decine di clienti.
-// Per una vera scala SaaS, sostituire con Postgres (Supabase/Neon) e una riga per tenant.
-
-function tenantFile(tenantId) {
-  return path.join(TENANTS_DIR, `${tenantId}.json`);
+if (!process.env.DATABASE_URL) {
+  console.error("ATTENZIONE: DATABASE_URL non impostata. I dati NON verranno salvati in modo permanente.");
 }
 
-async function ensureDir() {
-  if (!existsSync(TENANTS_DIR)) await mkdir(TENANTS_DIR, { recursive: true });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
+});
+
+let ready = false;
+async function ensureTable() {
+  if (ready) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tenants (
+      tenant_id TEXT PRIMARY KEY,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT now()
+    )
+  `);
+  ready = true;
 }
 
 function slugify(name) {
@@ -29,11 +36,12 @@ function slugify(name) {
 }
 
 export async function createTenant(profile) {
-  await ensureDir();
+  await ensureTable();
   const base = slugify(profile.name);
   let tenantId = base;
   let n = 1;
-  while (existsSync(tenantFile(tenantId))) tenantId = `${base}-${n++}`;
+  let nameAlreadyUsed = false;
+  while ((await loadTenant(tenantId)) !== null) { tenantId = `${base}-${n++}`; nameAlreadyUsed = true; }
 
   const state = {
     tenantId,
@@ -45,31 +53,33 @@ export async function createTenant(profile) {
     dailyReports: {}
   };
   await saveTenant(tenantId, state);
-  return state;
+  return { ...state, nameAlreadyUsed };
 }
 
 export async function loadTenant(tenantId) {
-  const file = tenantFile(tenantId);
-  if (!existsSync(file)) return null;
-  const raw = await readFile(file, "utf-8");
-  try { return JSON.parse(raw); } catch { return null; }
+  await ensureTable();
+  const res = await pool.query("SELECT data FROM tenants WHERE tenant_id = $1", [tenantId]);
+  if (res.rows.length === 0) return null;
+  return res.rows[0].data;
 }
 
 export async function saveTenant(tenantId, state) {
-  await ensureDir();
-  await writeFile(tenantFile(tenantId), JSON.stringify(state, null, 2), "utf-8");
+  await ensureTable();
+  await pool.query(
+    `INSERT INTO tenants (tenant_id, data, updated_at) VALUES ($1, $2, now())
+     ON CONFLICT (tenant_id) DO UPDATE SET data = $2, updated_at = now()`,
+    [tenantId, state]
+  );
 }
 
 export async function listTenantIds() {
-  await ensureDir();
-  const files = await readdir(TENANTS_DIR);
-  return files.filter(f => f.endsWith(".json")).map(f => f.replace(/\.json$/, ""));
+  await ensureTable();
+  const res = await pool.query("SELECT tenant_id FROM tenants ORDER BY updated_at DESC");
+  return res.rows.map(r => r.tenant_id);
 }
 
 export async function deleteTenant(tenantId) {
-  const file = tenantFile(tenantId);
-  if (!existsSync(file)) return false;
-  await unlink(file);
-  return true;
+  await ensureTable();
+  const res = await pool.query("DELETE FROM tenants WHERE tenant_id = $1", [tenantId]);
+  return res.rowCount > 0;
 }
-
