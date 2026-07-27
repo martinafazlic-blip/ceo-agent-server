@@ -29,8 +29,13 @@ Genera tra 5 e 8 task concreti e diversificati. Non inventare cifre finanziarie 
 
   const userMsg = `${profileContext(state.profile)}\n\nObiettivi e task gia attivi:\n${activeSummary}\n\nNuovo obiettivo: ${text}\nBudget indicato: ${budget || "non specificato"}\nScadenza (giorni): ${deadlineDays || "non specificata"}`;
 
-  const raw = await callClaude(system, userMsg);
-  const parsed = parseJSON(raw);
+  const raw = await callClaude(system, userMsg, 3000);
+  let parsed;
+  try{
+    parsed = parseJSON(raw);
+  }catch(e){
+    throw new Error("Il CEO Agent ha generato una risposta troppo lunga o incompleta. Prova a riformulare l'obiettivo in modo piu' semplice, o riprova.");
+  }
   const createdAt = Date.now();
   const threshold = parseFloat(state.profile.approvalThreshold) || 0;
 
